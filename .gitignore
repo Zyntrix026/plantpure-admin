@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env.example
+.env.local
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+
