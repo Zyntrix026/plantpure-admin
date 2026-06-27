@@ -28,6 +28,9 @@ import OrderDetails from "./pages/OrderDetails";
 import Coupon from "./pages/Coupon";
 import Admin from "./pages/Admin";
 import EmailCampaign from "./pages/EmailCampaign";
+import FacebookInbox from "./pages/Facebook";
+import InstagramInbox from "./pages/Instagram";
+import WhatsAppInbox from "./pages/Whatsapp";
 
 // Helper component to prevent logged-in users from seeing login page
 const PublicRoute = ({ children }) => {
@@ -50,7 +53,7 @@ function App() {
             element={
               <PublicRoute>
                 <Login />
-              </PublicRoute>
+              </PublicRoute> 
             }
           />
 
@@ -83,6 +86,9 @@ function App() {
               {/* Nested Edit Route */}
               <Route path="product/edit/:id" element={<EditProduct />} />
               <Route path="product/view/:id" element={<ProductView />} />
+              <Route path="/admin/leads/facebook" element={<FacebookInbox />} />
+              <Route path="/admin/leads/instagram" element={<InstagramInbox />} />
+              <Route path="/admin/leads/whatsapp" element={<WhatsAppInbox />} />
             </Route>
           </Route>
 

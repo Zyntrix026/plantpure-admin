@@ -42,7 +42,7 @@ export const getAuth = () => {
   return null;
 };
 
-export const getUser = () => {
+export const getUser = () => { 
   const auth = getAuth();
   return auth?.user || null;
 };

@@ -1,5 +1,5 @@
-import React from "react";
-import { NavLink } from "react-router-dom";
+import React, { useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -17,6 +17,10 @@ import {
   Tag,
   Star,
   Ticket,
+  Facebook,
+  Instagram,
+  MessageCircle,
+  ChevronDown,
 } from "lucide-react";
 
 const menuGroups = [
@@ -41,23 +45,29 @@ const menuGroups = [
   {
     title: "Customers & Social",
     items: [
+            {
+        name: "Lead Inbox",
+        icon: <MessageSquare size={20} />,
+        isDropdown: true,
+        subItems: [
+          { name: "Facebook", path: "/admin/leads/facebook", icon: <Facebook size={18} /> },
+          { name: "Instagram", path: "/admin/leads/instagram", icon: <Instagram size={18} /> },
+          { name: "WhatsApp", path: "/admin/leads/whatsapp", icon: <MessageCircle size={18} /> },
+        ],
+      },
       { name: "Orders", path: "/admin/orders", icon: <ShoppingCart size={20} /> },
+
       { name: "Customers", path: "/admin/customer", icon: <Users size={20} /> },
       { name: "Reviews", path: "/admin/review", icon: <MessageSquare size={20} /> },
+  
     ],
   },
-  // {
-  //   title: "Management",
-  //   items: [
-  //     { name: "Admin Management", path: "/admin/admin-managemenet", icon: <Mail size={20} /> },
-  //     { name: "Static Pages", path: "/admin/staticpage", icon: <FileText size={20} /> },
-  //     { name: "Settings", path: "/admin/settings", icon: <Settings size={20} /> },
-  //     { name: "Email Campaign", path: "/admin/email-campaign", icon: <Mail size={20} /> },
-  //   ],
-  // },
 ];
 
 const AdminSidebar = ({ collapsed, setCollapsed }) => {
+  const [leadInboxOpen, setLeadInboxOpen] = useState(false);
+  const location = useLocation();
+
   return (
     <aside
       className={`fixed top-0 left-0 h-screen bg-white border-r border-slate-100 shadow-xl transition-all duration-300 z-[60] flex flex-col ${
@@ -104,27 +114,93 @@ const AdminSidebar = ({ collapsed, setCollapsed }) => {
             )}
 
             <div className="space-y-1">
-              {group.items.map((item, index) => (
-                <NavLink
-                  key={index}
-                  to={item.path}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 p-3.5 rounded-2xl transition-all duration-200 group ${
-                      isActive
-                        ? "bg-primary text-white shadow-md shadow-primary/20"
-                        : "text-slate-500 hover:bg-slate-50"
-                    }`
-                  }
-                >
-                  <span className="shrink-0">{item.icon}</span>
+              {group.items.map((item, index) => {
+                // Check if this item is the Dropdown (Lead Inbox)
+                if (item.isDropdown) {
+                  const isSubItemActive = item.subItems.some(sub => location.pathname === sub.path);
+                  
+                  return (
+                    <div key={index} className="w-full">
+                      {/* Lead Inbox Main Button */}
+                      <button
+                        onClick={() => {
+                          if (collapsed) setCollapsed(false);
+                          setLeadInboxOpen(!leadInboxOpen);
+                        }}
+                        className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all duration-200 group ${
+                          isSubItemActive || leadInboxOpen
+                            ? "bg-slate-50 text-slate-800"
+                            : "text-slate-500 hover:bg-slate-50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="shrink-0">{item.icon}</span>
+                          {!collapsed && (
+                            <span className="text-sm font-bold whitespace-nowrap">
+                              {item.name}
+                            </span>
+                          )}
+                        </div>
+                        {!collapsed && (
+                          <ChevronDown
+                            size={16}
+                            className={`transition-transform duration-200 ${
+                              leadInboxOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        )}
+                      </button>
 
-                  {!collapsed && (
-                    <span className="text-sm font-bold whitespace-nowrap">
-                      {item.name}
-                    </span>
-                  )}
-                </NavLink>
-              ))}
+                      {/* Dropdown Items (Facebook, Instagram, Whatsapp) */}
+                      {!collapsed && leadInboxOpen && (
+                        <div className="mt-1 ml-4 pl-2 border-l border-slate-100 space-y-1 transition-all">
+                          {item.subItems.map((subItem, sIdx) => (
+                            <NavLink
+                              key={sIdx}
+                              to={subItem.path}
+                              className={({ isActive }) =>
+                                `flex items-center gap-3 p-3 rounded-xl transition-all duration-200 ${
+                                  isActive
+                                    ? "bg-primary text-white shadow-md shadow-primary/20"
+                                    : "text-slate-500 hover:bg-slate-50"
+                                }`
+                              }
+                            >
+                              <span className="shrink-0">{subItem.icon}</span>
+                              <span className="text-sm font-semibold whitespace-nowrap">
+                                {subItem.name}
+                              </span>
+                            </NavLink>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Regular NavLinks (Dashboard, Products, etc.)
+                return (
+                  <NavLink
+                    key={index}
+                    to={item.path}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 p-3.5 rounded-2xl transition-all duration-200 group ${
+                        isActive
+                          ? "bg-primary text-white shadow-md shadow-primary/20"
+                          : "text-slate-500 hover:bg-slate-50"
+                      }`
+                    }
+                  >
+                    <span className="shrink-0">{item.icon}</span>
+
+                    {!collapsed && (
+                      <span className="text-sm font-bold whitespace-nowrap">
+                        {item.name}
+                      </span>
+                    )}
+                  </NavLink>
+                );
+              })}
             </div>
           </div>
         ))}

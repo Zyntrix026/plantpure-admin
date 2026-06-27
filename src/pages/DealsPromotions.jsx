@@ -5,12 +5,12 @@ import {
   ExternalLink, Clock, ChevronRight, LayoutPanelTop,
   MousePointer2, Save, RefreshCw, Sparkles
 } from 'lucide-react';
-
+ 
 
 const DealPromotions = () => {
   const [isSaving, setIsSaving] = useState(false);
   const bannerInputRef = useRef(null);
-  
+    
   // --- MOCK DATA FOR UI ---
   const [dealOfTheDay, setDealOfTheDay] = useState({
     product: "Sony WH-1000XM5 Headphones",
