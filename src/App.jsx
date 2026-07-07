@@ -94,9 +94,9 @@ function App() {
               {/* Nested Edit Route */}
               <Route path="product/edit/:id" element={<EditProduct />} />
               <Route path="product/view/:id" element={<ProductView />} />
-              <Route path="/admin/leads/facebook" element={<FacebookInbox />} />
+              {/* <Route path="/admin/leads/facebook" element={<FacebookInbox />} />
               <Route path="/admin/leads/instagram" element={<InstagramInbox />} />
-              <Route path="/admin/leads/whatsapp" element={<WhatsAppInbox />} />
+              <Route path="/admin/leads/whatsapp" element={<WhatsAppInbox />} /> */}
             </Route>
           </Route>
 

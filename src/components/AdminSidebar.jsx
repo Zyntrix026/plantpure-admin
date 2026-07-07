@@ -46,16 +46,16 @@ const menuGroups = [
   {
     title: "Customers & Social",
     items: [
-            {
-        name: "Lead Inbox",
-        icon: <MessageSquare size={20} />,
-        isDropdown: true,
-        subItems: [
-          { name: "Facebook", path: "/admin/leads/facebook", icon: <Facebook size={18} /> },
-          { name: "Instagram", path: "/admin/leads/instagram", icon: <Instagram size={18} /> },
-          { name: "WhatsApp", path: "/admin/leads/whatsapp", icon: <MessageCircle size={18} /> },
-        ],
-      },
+      //       {
+      //   name: "Lead Inbox",
+      //   icon: <MessageSquare size={20} />,
+      //   isDropdown: true,
+      //   subItems: [
+      //     { name: "Facebook", path: "/admin/leads/facebook", icon: <Facebook size={18} /> },
+      //     { name: "Instagram", path: "/admin/leads/instagram", icon: <Instagram size={18} /> },
+      //     { name: "WhatsApp", path: "/admin/leads/whatsapp", icon: <MessageCircle size={18} /> },
+      //   ],
+      // },
       { name: "Orders", path: "/admin/orders", icon: <ShoppingCart size={20} /> },
 
       { name: "Customers", path: "/admin/customer", icon: <Users size={20} /> },
