@@ -31,6 +31,10 @@ import EmailCampaign from "./pages/EmailCampaign";
 import FacebookInbox from "./pages/Facebook";
 import InstagramInbox from "./pages/Instagram";
 import WhatsAppInbox from "./pages/Whatsapp";
+import Blogs from './pages/Blogs'
+import BlogCreate from './pages/CreateBlogPage'
+import ViewBlogs from "./pages/ViewBlogs";
+import EditBlogs from "./pages/EditBlogs";
 
 // Helper component to prevent logged-in users from seeing login page
 const PublicRoute = ({ children }) => {
@@ -74,6 +78,10 @@ function App() {
               {/* <Route path="features" element={<FeaturedProducts />} /> */}
               <Route path="customer" element={<Customers />} />
               <Route path="review" element={<Reviews />} />
+              <Route path="blogs" element={<Blogs />} />
+              <Route path="blogs/create" element={<BlogCreate />} />
+              <Route path="blogs/view/:id" element={<ViewBlogs />} />
+              <Route path="blogs/edit/:id" element={<EditBlogs />} />
               {/* <Route path="settings" element={<Settings />} /> */}
               {/* <Route path="contactmessages" element={<ContactMessages />} /> */}
               {/* <Route path="staticpage" element={<StaticPages />} /> */}

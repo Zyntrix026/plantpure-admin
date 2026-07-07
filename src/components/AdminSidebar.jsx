@@ -40,6 +40,7 @@ const menuGroups = [
       // { name: "Deals Of Day", path: "/admin/deals-of-day", icon: <Tag size={20} /> },
       // { name: "Popular Products", path: "/admin/popular-products", icon: <Star size={20} /> },
       { name: "Coupons", path: "/admin/coupons", icon: <Ticket size={20} /> },
+      { name: "Blogs", path: "/admin/blogs", icon: <FileText size={20} /> },
     ],
   },
   {
