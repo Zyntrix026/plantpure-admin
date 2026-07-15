@@ -36,7 +36,7 @@ import BlogCreate from "./pages/CreateBlogPage";
 import ViewBlogs from "./pages/ViewBlogs";
 import EditBlogs from "./pages/EditBlogs";
 import WebsiteLeads from "./pages/WebsiteLeads";
-import FacebookLeads from "./pages/facebookLeads";
+import FacebookLeads from "./pages/FacebookLeads";
 
 // Helper component to prevent logged-in users from seeing login page
 const PublicRoute = ({ children }) => {
