@@ -14,8 +14,18 @@ import {
   User
 } from "lucide-react";
 
-// API Base Configuration
-const API_URL = "/api/v1/facebook";
+// Determine the correct API Base URL depending on where the app is running
+const getApiUrl = () => {
+  const isLocalhost = 
+    window.location.hostname === "localhost" || 
+    window.location.hostname === "127.0.0.1";
+    
+  // If local, keep relative path (uses Vite proxy). If production, point directly to the domain.
+  const apiBase = isLocalhost ? "" : "https://api.plantpure.in";
+  return `${apiBase}/api/v1/facebook`;
+};
+
+const API_URL = getApiUrl();
 
 export default function FacebookInbox() {
   const [conversations, setConversations] = useState([]);
