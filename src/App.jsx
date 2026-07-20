@@ -31,6 +31,12 @@ import EmailCampaign from "./pages/EmailCampaign";
 import FacebookInbox from "./pages/Facebook";
 import InstagramInbox from "./pages/Instagram";
 import WhatsAppInbox from "./pages/Whatsapp";
+import Blogs from "./pages/Blogs";
+import BlogCreate from "./pages/CreateBlogPage";
+import ViewBlogs from "./pages/ViewBlogs";
+import EditBlogs from "./pages/EditBlogs";
+import WebsiteLeads from "./pages/WebsiteLeads";
+import FacebookLeads from "./pages/FacebookLeads";
 
 // Helper component to prevent logged-in users from seeing login page
 const PublicRoute = ({ children }) => {
@@ -53,7 +59,7 @@ function App() {
             element={
               <PublicRoute>
                 <Login />
-              </PublicRoute> 
+              </PublicRoute>
             }
           />
 
@@ -74,6 +80,10 @@ function App() {
               {/* <Route path="features" element={<FeaturedProducts />} /> */}
               <Route path="customer" element={<Customers />} />
               <Route path="review" element={<Reviews />} />
+              <Route path="blogs" element={<Blogs />} />
+              <Route path="blogs/create" element={<BlogCreate />} />
+              <Route path="blogs/view/:id" element={<ViewBlogs />} />
+              <Route path="blogs/edit/:id" element={<EditBlogs />} />
               {/* <Route path="settings" element={<Settings />} /> */}
               {/* <Route path="contactmessages" element={<ContactMessages />} /> */}
               {/* <Route path="staticpage" element={<StaticPages />} /> */}
@@ -87,8 +97,19 @@ function App() {
               <Route path="product/edit/:id" element={<EditProduct />} />
               <Route path="product/view/:id" element={<ProductView />} />
               <Route path="/admin/leads/facebook" element={<FacebookInbox />} />
-              <Route path="/admin/leads/instagram" element={<InstagramInbox />} />
-              <Route path="/admin/leads/whatsapp" element={<WhatsAppInbox />} />
+              <Route
+                path="/admin/leads/instagram"
+                element={<InstagramInbox />}
+              />
+              <Route
+                path="/admin/facebook/leads"
+                element={<FacebookLeads/>}
+              />
+              <Route
+                path="/admin/website/leads"
+                element={<WebsiteLeads/>}
+              />
+              {/* <Route path="/admin/leads/whatsapp" element={<WhatsAppInbox />} />  */}
             </Route>
           </Route>
 

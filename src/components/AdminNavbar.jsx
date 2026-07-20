@@ -20,7 +20,6 @@ const AdminNavbar = ({ collapsed }) => {
     const fetchAdmin = async () => {
       try {
         const data = await getAdminProfileData();
-        console.log("Admin Profile Data:", data); // Debugging ke liye
         setAdmin(data);
       } catch (error) {
         console.error("Failed to load admin profile:", error);
