@@ -14,10 +14,6 @@ import {
   User
 } from "lucide-react";
 
-<<<<<<< HEAD
-// API Base Configuration
-const API_URL = "/api/v1/facebook";
-=======
 // Determine the correct API Base URL depending on where the app is running
 const getApiUrl = () => {
   const isLocalhost = 
@@ -30,7 +26,6 @@ const getApiUrl = () => {
 };
 
 const API_URL = getApiUrl();
->>>>>>> 0104bff31f43bf4309a62a701a7fefb39da83b16
 
 export default function FacebookInbox() {
   const [conversations, setConversations] = useState([]);
