@@ -1,139 +1,279 @@
-import React, { useState } from "react";
-import { Phone, Video, Send, Paperclip, Mail, BookOpen, MoreHorizontal } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import React from "react";
+import {
+  ChevronLeft,
+  Image,
+  Instagram,
+  Loader2,
+  MoreHorizontal,
+  Plus,
+  RefreshCw,
+  Send,
+  UserRound,
+} from "lucide-react";
+import { api } from "../lib/api";
 
-const instagramUsers = [
-  { id: 2, name: "Silent Killer", platform: "Instagram", message: "Sent an attachment", time: "5m", unread: 0, avatar: "https://i.pravatar.cc/150?img=2", phone: "+91 99887 76655", email: "killer@demo.com", course: "B.Tech" },
-  { id: 5, name: "Rahul Verma", platform: "Instagram", message: "Is it affordable?", time: "5m", unread: 0, avatar: "https://i.pravatar.cc/150?img=5", phone: "+91 98765 22222", email: "rahul@mail.com", course: "MBA" },
-  { id: 8, name: "Vikas", platform: "Instagram", message: "Demo class?", time: "4h", unread: 0, avatar: "https://i.pravatar.cc/150?img=11", phone: "+91 98765 55555", email: "vikas@mail.com", course: "MCA" },
-];
+const STORAGE_KEY = "instagram-inbox-contacts";
+
+const getContactId = (contact) => String(contact?.id || contact?._id || contact?.contactId || "");
+const getContactName = (contact) => contact?.name || contact?.fullName || contact?.firstName || `Contact ${getContactId(contact)}`;
+
+const getMessageText = (message) => {
+  return message?.message?.text || message?.text || "";
+};
+
+const getMessageId = (message, index) => message?.messageId || message?.id || `${index}`;
+
+// Logic to check if the message is sent by you
+const isOutgoing = (message) => {
+  return message?.traffic === "outgoing";
+};
 
 export default function InstagramInbox() {
-  const [selectedUser, setSelectedUser] = useState(instagramUsers[0]);
+  const [contacts, setContacts] = useState(() => JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"));
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [channelId, setChannelId] = useState("");
   const [inputValue, setInputValue] = useState("");
-  const [messages, setMessages] = useState([
-    { id: 1, sender: "user", text: "Is there any batch starting soon on Instagram?" },
-    { id: 2, sender: "me", text: "Yes! New batch is starting from next Monday. Please share details." },
-  ]);
+  const [isMessagesLoading, setIsMessagesLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
-    setMessages([...messages, { id: Date.now(), sender: "me", text: inputValue }]);
-    setInputValue("");
+  const messagesEndRef = useRef(null);
+
+  // Initial load
+  useEffect(() => {
+    fetchContacts();
+  }, []);
+
+  // Scroll to bottom automatically
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const fetchContacts = async () => {
+    try {
+      const { data } = await api.get("/instagram/contacts");
+      setContacts(data.items || data);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.items || data));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchMessages = async (contactId) => {
+    setIsMessagesLoading(true);
+    try {
+      const { data } = await api.get(`/instagram/messages/${contactId}`);
+      const responseMessages = data.items || [];
+
+      if (responseMessages.length > 0) {
+        setChannelId(responseMessages[0].channelId);
+      }
+
+      setMessages([...responseMessages].reverse());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsMessagesLoading(false);
+    }
+  };
+
+  // Manual Sync Function
+  const handleSync = async () => {
+    setIsSyncing(true);
+    await fetchContacts();
+    if (selectedContact) {
+      await fetchMessages(getContactId(selectedContact));
+    }
+    setIsSyncing(false);
+  };
+
+  const selectContact = async (contact) => {
+    setSelectedContact(contact);
+    await fetchMessages(getContactId(contact));
+  };
+
+  const handleSend = async () => {
+    const text = inputValue.trim();
+    if (!text || !selectedContact) return;
+
+    try {
+      setInputValue(""); // Clear input immediately for UX
+
+      // 1. Send Message
+      await api.post("/instagram/reply", {
+        contactId: getContactId(selectedContact),
+        channelId,
+        text,
+      });
+
+      // 2. Turant fetch karein taaki user ka message bhi list me aaye
+      await fetchMessages(getContactId(selectedContact));
+
+    } catch (err) {
+      console.log("ERROR:", err.response?.data || err.message);
+      // Optional: Agar error aaye toh input wapas la sakte hain
+      setInputValue(text);
+    }
   };
 
   return (
-    /* Changed h-screen to h-[calc(100vh-80px)] to prevent overall layout breaking/scrolling */
-    <div className="h-[calc(100vh-90px)] w-full bg-slate-50 flex overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
-      
-      {/* 1. LEFT USER LIST */}
-      <div className="w-[360px] bg-white border-r flex flex-col h-full shrink-0">
-        <div className="p-5 border-b shrink-0">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-tight text-slate-900">Instagram DM</h2>
-            <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-full">
-              {instagramUsers.length} Direct
-            </span>
+    <div className="h-[calc(100vh-90px)] w-full flex bg-white rounded-2xl border shadow-sm overflow-hidden font-sans">
+
+      {/* Sidebar */}
+      <aside className="w-[350px] border-r bg-white flex flex-col">
+        {/* Updated Sidebar Header with Sync Button */}
+        <div className="p-5 border-b font-bold text-lg text-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Instagram className="text-blue-600" />
+            Instagram Inbox
           </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-          {instagramUsers.map((user) => (
-            <div 
-              key={user.id} 
-              onClick={() => setSelectedUser(user)}
-              className={`cursor-pointer px-4 py-3.5 flex items-center gap-3 transition-all ${
-                selectedUser.id === user.id ? "bg-emerald-50/60 border-r-4 border-emerald-600" : "hover:bg-slate-50"
-              }`}
-            >
-              <img src={user.avatar} className="w-11 h-11 rounded-full object-cover shadow-sm" alt="" />
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-baseline">
-                  <h4 className="font-semibold text-slate-800 text-sm truncate">{user.name}</h4>
-                  <span className="text-[10px] text-slate-400 font-medium">{user.time}</span>
-                </div>
-                <p className="text-xs text-slate-500 truncate mt-0.5">{user.message}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 2. MAIN CHAT CONTAINER */}
-      <div className="flex-1 flex flex-col bg-slate-50 h-full min-w-0">
-        {/* Chat Header */}
-        <div className="h-16 bg-white border-b px-6 flex items-center justify-between shadow-sm shrink-0">
-          <div className="flex items-center gap-3">
-            <img src={selectedUser.avatar} className="w-10 h-10 rounded-full object-cover" alt="" />
-            <div>
-              <h3 className="font-semibold text-sm text-slate-800">{selectedUser.name}</h3>
-              <p className="text-[10px] text-emerald-600 font-bold">Instagram Handle Sync</p>
-            </div>
-          </div>
-          <div className="flex gap-5 text-slate-500">
-            {/* <Phone size={18} className="cursor-pointer hover:text-slate-800" />
-            <Video size={18} className="cursor-pointer hover:text-slate-800" /> */}
-            <MoreHorizontal size={18} className="cursor-pointer hover:text-slate-800" />
-          </div>
-        </div>
-
-        {/* Chat Messages Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-emerald-50/10">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[65%] px-4 py-2.5 rounded-2xl shadow-xs text-sm leading-relaxed ${
-                msg.sender === "me" 
-                  ? "bg-emerald-600 text-white rounded-tr-sm" 
-                  : "bg-white text-slate-800 border border-slate-200/80 rounded-tl-sm"
-              }`}>
-                {msg.text}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Input Bar */}
-        <div className="bg-white p-4 flex items-center gap-3 border-t shrink-0">
-          <Paperclip size={20} className="text-slate-400 cursor-pointer hover:text-slate-600" />
-          <input 
-            value={inputValue} 
-            onChange={(e) => setInputValue(e.target.value)} 
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
-            className="flex-1 bg-slate-50 rounded-full px-5 py-2.5 outline-none text-sm border border-slate-200 focus:border-emerald-600 transition-colors" 
-            placeholder="Send a direct message..." 
-          />
-          <button onClick={handleSend} className="bg-emerald-600 hover:bg-emerald-700 p-2.5 rounded-full text-white shadow-sm transition-colors shrink-0">
-            <Send size={15} />
+          <button
+            onClick={handleSync}
+            disabled={isSyncing}
+            className={`p-2 rounded-full hover:bg-slate-100 text-slate-500 transition ${isSyncing ? 'animate-spin' : ''}`}
+          >
+            <RefreshCw size={18} />
           </button>
         </div>
-      </div>
 
-      {/* 3. RIGHT LEAD PANEL */}
-      <div className="w-[300px] bg-white border-l p-6 hidden xl:flex flex-col h-full shrink-0 overflow-y-auto">
-        <div className="flex flex-col items-center text-center border-b pb-6 shrink-0">
-          <img src={selectedUser.avatar} className="w-20 h-20 rounded-full mb-3 ring-4 ring-emerald-50 object-cover shadow-md" alt="" />
-          <h2 className="font-bold text-slate-800 text-base">{selectedUser.name}</h2>
-          <span className="mt-1 px-3 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-full text-[10px] tracking-wider uppercase border border-emerald-100">
-            Instagram Profiling
-          </span>
-        </div>
-        
-        <div className="mt-6 space-y-5">
-          {[
-            { label: "Phone Registry", value: selectedUser.phone, icon: <Phone size={14}/> },
-            { label: "Email System", value: selectedUser.email, icon: <Mail size={14}/> },
-            { label: "Academics Track", value: selectedUser.course, icon: <BookOpen size={14}/> },
-          ].map((item) => (
-            <div key={item.label} className="flex gap-3 items-start">
-              <div className="text-emerald-600 p-1.5 bg-emerald-50 rounded-lg mt-0.5">{item.icon}</div>
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">{item.label}</p>
-                <p className="text-sm font-semibold text-slate-700 mt-0.5">{item.value}</p>
+        <div className="flex-1 overflow-y-auto">
+          {contacts.map((c) => (
+            <button
+              key={getContactId(c)}
+              onClick={() => selectContact(c)}
+              className={`w-full flex items-center gap-3 px-4 py-3 border-b transition text-left ${getContactId(selectedContact) === getContactId(c)
+                  ? "bg-blue-50 border-l-4 border-l-blue-600"
+                  : "hover:bg-slate-50 border-l-4 border-l-transparent"
+                }`}
+            >
+              {/* Avatar */}
+              <img
+                src={c.profilePic || `https://ui-avatars.com/api/?name=${getContactName(c)}&background=random`}
+                alt={getContactName(c)}
+                className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+              />
+
+              {/* Name */}
+              <div className="flex-1 overflow-hidden">
+                <p className="font-semibold text-slate-800 truncate">
+                  {getContactName(c)}
+                </p>
+                <p className="text-xs text-slate-500 truncate">
+                  {c.lifecycle || "Instagram User"}
+                </p>
               </div>
-            </div>
+            </button>
           ))}
         </div>
-      </div>
+      </aside>
 
+      {/* Main Chat */}
+      <main className="flex-1 flex flex-col bg-white relative">
+        {selectedContact ? (
+          <>
+            {/* Chat Header */}
+            <header className="px-6 py-4 border-b bg-white flex items-center gap-3 z-10 shadow-sm">
+              <img
+                src={selectedContact.profilePic || `https://ui-avatars.com/api/?name=${getContactName(selectedContact)}&background=random`}
+                alt={getContactName(selectedContact)}
+                className="w-10 h-10 rounded-full object-cover"
+              />
+              <div>
+                <h2 className="font-bold text-slate-800 text-[16px]">{getContactName(selectedContact)}</h2>
+                <p className="text-xs text-slate-500">Active now</p>
+              </div>
+            </header>
+
+            {/* Chat Messages */}
+            <section className="flex-1 overflow-y-auto p-6 bg-white flex flex-col">
+
+              {isMessagesLoading && messages.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <Loader2 className="animate-spin text-blue-600" size={40} />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {messages.map((m, i) => {
+                    const outgoing = isOutgoing(m);
+
+                    // Show avatar only if it's an incoming message AND it's the last message in a block from that user
+                    const showAvatar = !outgoing && (i === messages.length - 1 || isOutgoing(messages[i + 1]));
+
+                    return (
+                      <div key={getMessageId(m, i)} className={`flex w-full ${outgoing ? "justify-end" : "justify-start"}`}>
+
+                        {/* Avatar container for Left side (Incoming) */}
+                        {!outgoing && (
+                          <div className="w-8 flex-shrink-0 flex flex-col justify-end mr-2">
+                            {showAvatar ? (
+                              <img
+                                src={selectedContact.profilePic || `https://ui-avatars.com/api/?name=${getContactName(selectedContact)}&background=random`}
+                                alt=""
+                                className="w-7 h-7 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-7 h-7" /> // Empty space placeholder to align grouped messages
+                            )}
+                          </div>
+                        )}
+
+                        {/* Message Bubble */}
+                        <div
+                          className={`px-5 py-2.5 text-[15px] max-w-[70%] break-words ${outgoing
+                              ? "bg-blue-600 text-white rounded-[24px]"
+                              : "bg-gray-100 text-gray-900 rounded-[24px]"
+                            }`}
+                        >
+                          {getMessageText(m)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {/* Invisible div for auto-scrolling */}
+                  <div ref={messagesEndRef} className="h-4" />
+                </div>
+              )}
+            </section>
+
+            {/* Chat Input Section */}
+            <footer className="p-4 bg-white border-t flex items-center gap-3">
+              <input
+                value={channelId}
+                onChange={(e) => setChannelId(e.target.value)}
+                placeholder="Channel ID"
+                title="Channel ID"
+                className="border border-slate-200 p-2.5 rounded-full w-28 text-sm outline-none text-slate-600 focus:border-blue-400 transition-colors hidden md:block"
+              />
+
+              <div className="flex-1 flex items-center bg-gray-100 border border-transparent focus-within:border-gray-200 focus-within:bg-white rounded-full px-4 py-1.5 transition-all">
+                <input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  className="flex-1 bg-transparent p-2 outline-none text-slate-800 placeholder-slate-500"
+                  placeholder="Message..."
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!inputValue.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white p-2 rounded-full transition-colors flex items-center justify-center ml-2 shadow-sm"
+                >
+                  <Send size={18} className="-ml-0.5" />
+                </button>
+              </div>
+            </footer>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-4">
+            <div className="w-24 h-24 rounded-full border-2 border-blue-500 flex items-center justify-center bg-blue-50 text-blue-500">
+              <Instagram size={48} />
+            </div>
+            <p className="text-lg font-medium text-slate-700">Your Messages</p>
+            <p className="text-sm">Select a contact to start chatting.</p>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

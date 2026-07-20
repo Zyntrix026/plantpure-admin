@@ -3,7 +3,7 @@ import axios from "axios";
 import { Phone, Video, Send, Paperclip, Mail, BookOpen, MoreHorizontal, RefreshCw, Loader2 } from "lucide-react";
 
 // API Base Configuration
-const API_URL = "https://plantpure-backend.vercel.app/api/v1/facebook";
+const API_URL = "/api/v1/facebook";
 
 export default function FacebookInbox() {
   const [conversations, setConversations] = useState([]);
@@ -117,7 +117,8 @@ export default function FacebookInbox() {
     const payload = {
       recipientId: targetRecipientId,
       conversationId: selectedUser.fbConversationId,
-      messageText: inputValue.trim()
+      messageText: inputValue.trim(),
+      tag: "HUMAN_AGENT"
     };
 
     setIsSending(true);
