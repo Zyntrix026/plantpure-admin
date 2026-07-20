@@ -24,7 +24,6 @@ const getMessageText = (message) => {
 
 const getMessageId = (message, index) => message?.messageId || message?.id || `${index}`;
 
-// Logic to check if the message is sent by you
 const isOutgoing = (message) => {
   return message?.traffic === "outgoing";
 };
@@ -53,14 +52,16 @@ export default function InstagramInbox() {
   const fetchContacts = async () => {
     try {
       const { data } = await api.get("/instagram/contacts");
-      setContacts(data.items || data);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.items || data));
+      const fetchedContacts = data.items || data || [];
+      setContacts(fetchedContacts);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(fetchedContacts));
     } catch (err) {
       console.error(err);
     }
   };
 
   const fetchMessages = async (contactId) => {
+    if (!contactId) return;
     setIsMessagesLoading(true);
     try {
       const { data } = await api.get(`/instagram/messages/${contactId}`);
@@ -90,29 +91,56 @@ export default function InstagramInbox() {
 
   const selectContact = async (contact) => {
     setSelectedContact(contact);
+    setMessages([]); // Clear previous chat instantly to avoid UI flashing
     await fetchMessages(getContactId(contact));
   };
 
   const handleSend = async () => {
     const text = inputValue.trim();
+    const activeContactId = getContactId(selectedContact);
     if (!text || !selectedContact) return;
 
-    try {
-      setInputValue(""); // Clear input immediately for UX
+    // 1. Create a temporary message layout to match your DB schema
+    const optimisticMessage = {
+      id: `temp-${Date.now()}`,
+      traffic: "outgoing",
+      channelId: channelId,
+      text: text, // Fallback for getMessageText helper
+      message: {
+        text: text
+      }
+    };
 
-      // 1. Send Message
+    try {
+      setInputValue(""); // Clear input field instantly for crisp UI
+      
+      // 2. Add it to screen instantly before API completes
+      setMessages((prev) => [...prev, optimisticMessage]);
+
+      // 3. Send Message to backend
       await api.post("/instagram/reply", {
-        contactId: getContactId(selectedContact),
+        contactId: activeContactId,
         channelId,
         text,
       });
 
-      // 2. Turant fetch karein taaki user ka message bhi list me aaye
-      await fetchMessages(getContactId(selectedContact));
+      // 4. Wait 1 second (Optional but recommended for IG Webhooks to register) 
+      // then fetch clean data from server
+      setTimeout(async () => {
+        try {
+          const { data } = await api.get(`/instagram/messages/${activeContactId}`);
+          const responseMessages = data.items || [];
+          setMessages([...responseMessages].reverse());
+        } catch (fetchErr) {
+          console.error("Background refresh failed:", fetchErr);
+        }
+      }, 800);
 
     } catch (err) {
       console.log("ERROR:", err.response?.data || err.message);
-      // Optional: Agar error aaye toh input wapas la sakte hain
+      
+      // Remove the optimistic message if it failed and restore input text
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
       setInputValue(text);
     }
   };
@@ -122,7 +150,7 @@ export default function InstagramInbox() {
 
       {/* Sidebar */}
       <aside className="w-[350px] border-r bg-white flex flex-col">
-        {/* Updated Sidebar Header with Sync Button */}
+        {/* Sidebar Header */}
         <div className="p-5 border-b font-bold text-lg text-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Instagram className="text-blue-600" />
@@ -137,6 +165,7 @@ export default function InstagramInbox() {
           </button>
         </div>
 
+        {/* Contacts List */}
         <div className="flex-1 overflow-y-auto">
           {contacts.map((c) => (
             <button
@@ -147,14 +176,11 @@ export default function InstagramInbox() {
                   : "hover:bg-slate-50 border-l-4 border-l-transparent"
                 }`}
             >
-              {/* Avatar */}
               <img
                 src={c.profilePic || `https://ui-avatars.com/api/?name=${getContactName(c)}&background=random`}
                 alt={getContactName(c)}
                 className="w-12 h-12 rounded-full object-cover flex-shrink-0"
               />
-
-              {/* Name */}
               <div className="flex-1 overflow-hidden">
                 <p className="font-semibold text-slate-800 truncate">
                   {getContactName(c)}
@@ -168,7 +194,7 @@ export default function InstagramInbox() {
         </div>
       </aside>
 
-      {/* Main Chat */}
+      {/* Main Chat Area */}
       <main className="flex-1 flex flex-col bg-white relative">
         {selectedContact ? (
           <>
@@ -185,9 +211,8 @@ export default function InstagramInbox() {
               </div>
             </header>
 
-            {/* Chat Messages */}
+            {/* Chat Messages Panel */}
             <section className="flex-1 overflow-y-auto p-6 bg-white flex flex-col">
-
               {isMessagesLoading && messages.length === 0 ? (
                 <div className="flex-1 flex items-center justify-center">
                   <Loader2 className="animate-spin text-blue-600" size={40} />
@@ -196,14 +221,12 @@ export default function InstagramInbox() {
                 <div className="flex flex-col gap-1.5">
                   {messages.map((m, i) => {
                     const outgoing = isOutgoing(m);
-
-                    // Show avatar only if it's an incoming message AND it's the last message in a block from that user
                     const showAvatar = !outgoing && (i === messages.length - 1 || isOutgoing(messages[i + 1]));
 
                     return (
                       <div key={getMessageId(m, i)} className={`flex w-full ${outgoing ? "justify-end" : "justify-start"}`}>
-
-                        {/* Avatar container for Left side (Incoming) */}
+                        
+                        {/* Left Side Avatar */}
                         {!outgoing && (
                           <div className="w-8 flex-shrink-0 flex flex-col justify-end mr-2">
                             {showAvatar ? (
@@ -213,7 +236,7 @@ export default function InstagramInbox() {
                                 className="w-7 h-7 rounded-full object-cover"
                               />
                             ) : (
-                              <div className="w-7 h-7" /> // Empty space placeholder to align grouped messages
+                              <div className="w-7 h-7" />
                             )}
                           </div>
                         )}
@@ -230,13 +253,12 @@ export default function InstagramInbox() {
                       </div>
                     );
                   })}
-                  {/* Invisible div for auto-scrolling */}
                   <div ref={messagesEndRef} className="h-4" />
                 </div>
               )}
             </section>
 
-            {/* Chat Input Section */}
+            {/* Chat Footer Input */}
             <footer className="p-4 bg-white border-t flex items-center gap-3">
               <input
                 value={channelId}
