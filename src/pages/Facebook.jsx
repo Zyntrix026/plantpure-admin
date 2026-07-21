@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import { useSocket } from "../lib/useSocket";
 import { 
   Phone, 
   Video, 
@@ -43,9 +44,36 @@ export default function FacebookInbox() {
   const [isSending, setIsSending] = useState(false);
   
   const messagesEndRef = useRef(null);
+  const selectedUserRef = useRef(null);
 
   // Safely extract Page ID from Vite Environment or fallback to empty string
   const PAGE_ID = import.meta.env.VITE_FB_PAGE_ID || "";
+
+  // Always keep ref in sync with latest selectedUser
+  useEffect(() => {
+    selectedUserRef.current = selectedUser;
+  }, [selectedUser]);
+
+  // REAL-TIME: Socket listener — fires instantly when Meta webhook hits backend
+  useSocket({
+    fb_new_message: ({ conversationId, message }) => {
+      // 1. Update sidebar conversation timestamp
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.fbConversationId === conversationId
+            ? { ...c, lastMessageAt: new Date().toISOString() }
+            : c
+        )
+      );
+      // 2. If this conversation is open, append message instantly
+      if (selectedUserRef.current?.fbConversationId === conversationId) {
+        setMessages((prev) => {
+          const alreadyExists = prev.some((m) => m.fbMessageId === message.fbMessageId);
+          return alreadyExists ? prev : [...prev, message];
+        });
+      }
+    },
+  });
 
   // Auto-scroll inside chat windows
   const scrollToBottom = () => {

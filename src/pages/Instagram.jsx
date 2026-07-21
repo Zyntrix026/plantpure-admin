@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import React from "react";
+import { useSocket } from "../lib/useSocket";
 import {
   ChevronLeft,
   Image,
@@ -38,16 +39,36 @@ export default function InstagramInbox() {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const messagesEndRef = useRef(null);
+  const selectedContactRef = useRef(null);
 
-  // Initial load
+  // Always keep ref in sync with latest selectedContact
   useEffect(() => {
-    fetchContacts();
-  }, []);
+    selectedContactRef.current = selectedContact;
+  }, [selectedContact]);
 
-  // Scroll to bottom automatically
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  // REAL-TIME: Socket listener — fires instantly when respond.io webhook hits backend
+  useSocket({
+    ig_new_message: ({ contactId, message }) => {
+      const active = selectedContactRef.current;
+
+      // 1. If this contact's chat is open, append message instantly
+      if (active && String(getContactId(active)) === String(contactId)) {
+        setMessages((prev) => {
+          // Deduplicate by messageId
+          const alreadyExists = prev.some(
+            (m) => getMessageId(m, -1) === getMessageId(message, -1)
+          );
+          if (alreadyExists) return prev;
+          // Update channelId if present
+          if (message.channelId) setChannelId(message.channelId);
+          return [...prev, message];
+        });
+      }
+
+      // 2. Refresh contacts list so sidebar shows latest contact on top
+      fetchContacts();
+    },
+  });
 
   const fetchContacts = async () => {
     try {
@@ -66,11 +87,7 @@ export default function InstagramInbox() {
     try {
       const { data } = await api.get(`/instagram/messages/${contactId}`);
       const responseMessages = data.items || [];
-
-      if (responseMessages.length > 0) {
-        setChannelId(responseMessages[0].channelId);
-      }
-
+      if (responseMessages.length > 0) setChannelId(responseMessages[0].channelId);
       setMessages([...responseMessages].reverse());
     } catch (err) {
       console.error(err);
@@ -78,6 +95,16 @@ export default function InstagramInbox() {
       setIsMessagesLoading(false);
     }
   };
+
+  // Initial load
+  useEffect(() => {
+    fetchContacts();
+  }, []);
+
+  // Scroll to bottom automatically
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   // Manual Sync Function
   const handleSync = async () => {
@@ -124,8 +151,7 @@ export default function InstagramInbox() {
         text,
       });
 
-      // 4. Wait 1 second (Optional but recommended for IG Webhooks to register) 
-      // then fetch clean data from server
+      // 4. Wait for IG Webhooks to register then fetch clean data from server
       setTimeout(async () => {
         try {
           const { data } = await api.get(`/instagram/messages/${activeContactId}`);
