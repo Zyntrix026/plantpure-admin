@@ -35,7 +35,6 @@ export default function WebsiteLeads() {
   useEffect(() => {
     fetchInquiries();
     
-    // Close dropdown menus when clicking anywhere outside
     const handleOutsideClick = () => setOpenMenuId(null);
     window.addEventListener('click', handleOutsideClick);
     return () => window.removeEventListener('click', handleOutsideClick);
@@ -71,11 +70,10 @@ export default function WebsiteLeads() {
     }
   };
 
-  // Triggers the custom modal instead of standard browser confirm
   const openDeleteConfirmation = (leadId) => {
     setLeadToDelete(leadId);
     setIsModalOpen(true);
-    setOpenMenuId(null); // Close the dropdown menu immediately
+    setOpenMenuId(null); 
   };
 
   const confirmDeleteLead = async () => {
