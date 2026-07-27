@@ -397,7 +397,7 @@ const Orders = () => {
             {[
               { id: "all", label: "All Orders", icon: Filter },
               { id: "delivery", label: "Home Delivery", icon: Truck },
-              { id: "store_pickup", label: "Store Pickup", icon: Store },
+              // { id: "store_pickup", label: "Store Pickup", icon: Store },
             ].map((m) => (
               <button key={m.id} onClick={() => { setShippingMethod(m.id); setActiveStatus("all"); setPagination(p => ({ ...p, currentPage: 1 })); }}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap ${shippingMethod === m.id ? "bg-[#253D4E] text-white" : "text-slate-500 hover:bg-slate-50"}`}>
