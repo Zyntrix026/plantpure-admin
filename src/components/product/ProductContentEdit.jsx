@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { Trash2, Info, Image as ImageIcon, Upload, Hash, Tag, Boxes, AlignLeft, Percent, Plus, X, Layers, RefreshCw } from 'lucide-react';
 import JodEditor from '../editor/JodEditor';
 
-const ProductContentEdit = ({ formData, setFormData, images, setImages, errors = {}, onRegenerateSKU }) => {
+const ProductContentEdit = ({ formData, setFormData, images, setImages, errors = {}, onRegenerateSKU, onImageUpload }) => {
   const fileInputRef = useRef(null);
   const activeIndex = useRef(null);
 
@@ -10,21 +10,17 @@ const ProductContentEdit = ({ formData, setFormData, images, setImages, errors =
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
+    // Show local preview immediately
     const reader = new FileReader();
     reader.onloadend = () => {
       const newImages = [...images];
-      newImages[activeIndex.current] = {
-        file,
-        preview: reader.result,
-        url: '',
-        fileId: null,
-        size: file.size
-      };
+      newImages[activeIndex.current] = { file, preview: reader.result, url: '', fileId: null, size: file.size };
       setImages(newImages);
     };
     reader.readAsDataURL(file);
-    e.target.value = null; // Flush stream buffer
+    // Upload to server immediately
+    onImageUpload?.(file, activeIndex.current);
+    e.target.value = null;
   };
 
   const triggerUpload = (index) => {

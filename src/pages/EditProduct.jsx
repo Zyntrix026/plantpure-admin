@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import ProductContentEdit from '../components/product/ProductContentEdit';
 import ProductSidebarEdit from '../components/product/ProductSidebarEdit';
 import { getCategoriesFormatted } from '../lib/categories';
-import { getProductById, updateProduct } from '../lib/product';
+import { getProductById, updateProduct, uploadImage } from '../lib/product';
 
 const EditProduct = () => {
   const { id } = useParams();
@@ -131,6 +131,21 @@ const EditProduct = () => {
     return () => clearTimeout(timer);
   }, [formData.title, formData.basePrice, formData.discountPrice, isLoading]);
 
+  const handleImageUpload = async (file, index) => {
+    const toastId = toast.loading('Uploading...');
+    try {
+      const uploaded = await uploadImage(file, 'products/images');
+      setImages(prev => {
+        const next = [...prev];
+        next[index] = { ...uploaded, preview: URL.createObjectURL(file) };
+        return next;
+      });
+      toast.success('Uploaded!', { id: toastId });
+    } catch (err) {
+      toast.error(err.message, { id: toastId });
+    }
+  };
+
   const handleUpdate = async (targetStatus) => {
     if (!formData.title || formData.category.length === 0) {
       toast.error("Title and Category are required");
@@ -140,7 +155,7 @@ const EditProduct = () => {
     setIsSaving(true);
     const toastId = toast.loading("Updating...");
     
-    const finalImages = images.filter(Boolean).map(img => ({ 
+    const finalImages = images.filter(img => img && img.url).map(img => ({ 
       url: img.url, fileId: img.fileId, alt: formData.title, size: img.size 
     }));
 
@@ -216,7 +231,7 @@ const EditProduct = () => {
                setFormData={setFormData} 
                images={images} 
                setImages={setImages} 
-               onImageUpload={handleUpdate}
+               onImageUpload={handleImageUpload}
                errors={errors}
                onRegenerateSKU={() => setFormData(p => ({...p, sku: generateSKU(p.title)}))}
             />
