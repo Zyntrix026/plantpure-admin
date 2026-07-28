@@ -34,6 +34,7 @@ const menuGroups = [
       { name: "Categories", path: "/admin/categories", icon: <Cpu size={20} /> },
       { name: "Coupons", path: "/admin/coupons", icon: <Ticket size={20} /> },
       { name: "Blogs", path: "/admin/blogs", icon: <FileText size={20} /> },
+      { name: "Google Reviews", path: "/admin/google-reviews", icon: <MessageSquare size={20} /> },
     ],
   },
   {
