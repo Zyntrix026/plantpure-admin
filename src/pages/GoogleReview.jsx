@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   Star, Search, Plus, Edit2, Trash2, X, ChevronLeft, ChevronRight, AlertCircle, CheckCircle, AlertTriangle 
 } from "lucide-react";
 
 // Import API functions
 import { getReviews, createReview, updateReview, deleteReview } from "../lib/googleReview.js";
-
-const ITEMS_PER_PAGE = 8;
 
 const GoogleReview = () => {
   // Main Data States
@@ -15,14 +13,16 @@ const GoogleReview = () => {
   const [apiError, setApiError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  // UI States
-  const [searchTerm, setSearchTerm] = useState("");
+  // Server Pagination States
   const [currentPage, setCurrentPage] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingReview, setEditingReview] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Custom Delete Modal State
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -66,22 +66,32 @@ const GoogleReview = () => {
     };
   };
 
-  // 1. Fetch Reviews from Backend API
-  const fetchReviewsData = useCallback(async () => {
+  // 1. Fetch Reviews with Page and Search params
+  const fetchReviewsData = useCallback(async (page = 1, search = "") => {
     setIsLoading(true);
     setApiError("");
     try {
-      const response = await getReviews();
-      let rawData = [];
+      // Limit set to 10 per requirement
+      const params = { page, limit: 10 };
+      if (search.trim()) {
+        params.search = search.trim();
+      }
 
+      const response = await getReviews(params);
+
+      let rawData = [];
       if (Array.isArray(response)) {
         rawData = response;
+        setTotalPages(1);
+        setTotalReviews(response.length);
       } else if (response?.data && Array.isArray(response.data)) {
         rawData = response.data;
+        setTotalPages(response.totalPages || 1);
+        setTotalReviews(response.totalReviews || response.data.length);
       } else if (response?.reviews && Array.isArray(response.reviews)) {
         rawData = response.reviews;
-      } else if (response?.result && Array.isArray(response.result)) {
-        rawData = response.result;
+        setTotalPages(response.totalPages || 1);
+        setTotalReviews(response.totalReviews || response.reviews.length);
       } else if (response?.success === false) {
         showFeedback(response.message || "Failed to fetch reviews", true);
       }
@@ -95,16 +105,20 @@ const GoogleReview = () => {
     }
   }, []);
 
+  // Page change or Search trigger
   useEffect(() => {
-    fetchReviewsData();
-  }, [fetchReviewsData]);
+    const timer = setTimeout(() => {
+      fetchReviewsData(currentPage, searchTerm);
+    }, 300); // 300ms debounce for search input
+
+    return () => clearTimeout(timer);
+  }, [currentPage, searchTerm, fetchReviewsData]);
 
   // Flexible URL Validation
   const isValidImageUrl = (url) => {
     if (!url) return true;
     const cleanUrl = url.trim();
     if (!cleanUrl) return true;
-
     if (cleanUrl.startsWith("data:image/")) return true;
 
     try {
@@ -138,7 +152,7 @@ const GoogleReview = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Open Modal for Add
+  // Modal Handlers
   const handleOpenAdd = () => {
     setEditingReview(null);
     setFormData({ name: "", rating: 5, comment: "", image: "" });
@@ -146,7 +160,6 @@ const GoogleReview = () => {
     setIsModalOpen(true);
   };
 
-  // Open Modal for Edit
   const handleOpenEdit = (review) => {
     const normalized = normalizeReview(review);
     setEditingReview(normalized);
@@ -160,7 +173,7 @@ const GoogleReview = () => {
     setIsModalOpen(true);
   };
 
-  // 2. Custom Delete Trigger & Confirm
+  // Delete Action
   const promptDelete = (id) => {
     setDeleteTargetId(id);
   };
@@ -174,8 +187,8 @@ const GoogleReview = () => {
       if (res?.success === false) {
         showFeedback(res.message || "Failed to delete review", true);
       } else {
-        setReviews((prev) => prev.filter((r) => r.id !== deleteTargetId && r._id !== deleteTargetId));
         showFeedback("Review deleted successfully!");
+        fetchReviewsData(currentPage, searchTerm);
       }
     } catch (error) {
       showFeedback("Something went wrong while deleting.", true);
@@ -185,7 +198,7 @@ const GoogleReview = () => {
     }
   };
 
-  // 3. Submit Handler (Add or Edit)
+  // Submit Handler (Add or Edit)
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -206,14 +219,9 @@ const GoogleReview = () => {
         if (res?.success === false) {
           showFeedback(res.message || "Failed to update review", true);
         } else {
-          const rawUpdated = res.data || { ...editingReview, ...payload };
-          const updatedItem = normalizeReview(rawUpdated);
-
-          setReviews((prev) =>
-            prev.map((r) => ((r.id || r._id) === targetId ? updatedItem : r))
-          );
           showFeedback("Review updated successfully!");
           setIsModalOpen(false);
+          fetchReviewsData(currentPage, searchTerm);
         }
       } else {
         const res = await createReview(payload);
@@ -221,16 +229,11 @@ const GoogleReview = () => {
         if (res?.success === false) {
           showFeedback(res.message || "Failed to create review", true);
         } else {
-          const rawNew = res.data || {
-            ...payload,
-            id: res.id || res._id || Date.now(),
-            date: new Date().toISOString(),
-          };
-          const newItem = normalizeReview(rawNew);
-
-          setReviews((prev) => [newItem, ...prev]);
           showFeedback("Review added successfully!");
           setIsModalOpen(false);
+          // Go to first page to show newly added item
+          setCurrentPage(1);
+          fetchReviewsData(1, searchTerm);
         }
       }
     } catch (error) {
@@ -239,26 +242,6 @@ const GoogleReview = () => {
       setIsSubmitting(false);
     }
   };
-
-  // 4. Search Filtering
-  const filteredReviews = useMemo(() => {
-    if (!searchTerm.trim()) return reviews;
-    const term = searchTerm.toLowerCase().trim();
-
-    return reviews.filter(
-      (r) =>
-        (r.name && r.name.toLowerCase().includes(term)) ||
-        (r.comment && r.comment.toLowerCase().includes(term)) ||
-        (r.rating && r.rating.toString() === term)
-    );
-  }, [reviews, searchTerm]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredReviews.length / ITEMS_PER_PAGE) || 1;
-  const currentReviews = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredReviews.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredReviews, currentPage]);
 
   const getInitial = (name) => (name ? name.trim().charAt(0).toUpperCase() : "?");
 
@@ -278,14 +261,14 @@ const GoogleReview = () => {
         
         {/* Global Notifications */}
         {apiError && (
-          <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm flex items-center gap-3 shadow-sm animate-in fade-in">
+          <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm flex items-center gap-3 shadow-sm">
             <AlertCircle className="w-5 h-5 shrink-0 text-rose-500" />
             <span>{apiError}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm flex items-center gap-3 shadow-sm animate-in fade-in">
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm flex items-center gap-3 shadow-sm">
             <CheckCircle className="w-5 h-5 shrink-0 text-emerald-500" />
             <span>{successMsg}</span>
           </div>
@@ -296,7 +279,7 @@ const GoogleReview = () => {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Review Management</h1>
             <p className="text-slate-500 text-sm mt-0.5">
-              Manage and moderate customer reviews. Total ({reviews.length})
+              Manage and moderate customer reviews. Total ({totalReviews})
             </p>
           </div>
 
@@ -315,7 +298,7 @@ const GoogleReview = () => {
             <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by name, comment, or exact rating..."
+              placeholder="Search by name or comment..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -342,7 +325,6 @@ const GoogleReview = () => {
 
               <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
-                  // --- SKELETON LOADING ROWS ---
                   [...Array(5)].map((_, idx) => (
                     <tr key={idx} className="animate-pulse">
                       <td className="px-6 py-4">
@@ -360,7 +342,6 @@ const GoogleReview = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="h-4 w-48 bg-slate-200 rounded mb-1" />
-                        <div className="h-3 w-32 bg-slate-100 rounded" />
                       </td>
                       <td className="px-6 py-4">
                         <div className="h-4 w-20 bg-slate-200 rounded" />
@@ -373,13 +354,11 @@ const GoogleReview = () => {
                       </td>
                     </tr>
                   ))
-                ) : currentReviews.length > 0 ? (
-                  currentReviews.map((review) => {
+                ) : reviews.length > 0 ? (
+                  reviews.map((review) => {
                     const reviewId = review.id || review._id;
                     return (
                       <tr key={reviewId} className="hover:bg-slate-50/80 transition">
-                        
-                        {/* Customer Avatar & Name */}
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             {review.image ? (
@@ -401,7 +380,6 @@ const GoogleReview = () => {
                           </div>
                         </td>
 
-                        {/* Star Rating */}
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-1 text-amber-400">
                             {[...Array(5)].map((_, i) => (
@@ -415,17 +393,14 @@ const GoogleReview = () => {
                           </div>
                         </td>
 
-                        {/* Comment */}
                         <td className="px-6 py-4 max-w-xs md:max-w-md truncate text-slate-700">
                           {review.comment ? `"${review.comment}"` : <span className="text-slate-400 italic">No comment provided</span>}
                         </td>
 
-                        {/* Date */}
                         <td className="px-6 py-4 whitespace-nowrap text-slate-400 text-xs">
                           {formatDate(review.date)}
                         </td>
 
-                        {/* Actions */}
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
@@ -451,7 +426,7 @@ const GoogleReview = () => {
                 ) : (
                   <tr>
                     <td colSpan="5" className="text-center py-12 text-slate-400">
-                      No reviews found matching your search.
+                      No reviews found.
                     </td>
                   </tr>
                 )}
@@ -459,11 +434,11 @@ const GoogleReview = () => {
             </table>
           </div>
 
-          {/* Table Footer / Pagination */}
+          {/* Table Footer / Server Pagination */}
           {!isLoading && totalPages > 1 && (
             <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-200">
               <span className="text-xs text-slate-500">
-                Page {currentPage} of {totalPages}
+                Page {currentPage} of {totalPages} (Total {totalReviews} reviews)
               </span>
 
               <div className="flex items-center gap-2">
@@ -488,11 +463,10 @@ const GoogleReview = () => {
         </div>
       </div>
 
-      {/* --- ADD / EDIT MODAL --- */}
+      {/* Modal - Add / Edit */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 space-y-6">
-            
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <h2 className="text-xl font-bold text-slate-900">
                 {editingReview ? "Edit Review" : "Add New Review"}
@@ -599,12 +573,8 @@ const GoogleReview = () => {
                       : "border-slate-200 focus:ring-indigo-500/20 focus:border-indigo-500"
                   }`}
                 />
-                {formErrors.image ? (
+                {formErrors.image && (
                   <p className="text-xs text-rose-500 mt-1">{formErrors.image}</p>
-                ) : (
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Accepts any web image link. If left blank, an avatar initial will be used.
-                  </p>
                 )}
               </div>
 
@@ -627,16 +597,14 @@ const GoogleReview = () => {
                 </button>
               </div>
             </form>
-
           </div>
         </div>
       )}
 
-      {/* --- CUSTOM DELETE CONFIRMATION MODAL --- */}
+      {/* Delete Confirmation Modal */}
       {deleteTargetId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4 text-center">
-            
             <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
               <AlertTriangle className="w-6 h-6" />
             </div>
@@ -667,11 +635,9 @@ const GoogleReview = () => {
                 {isDeleting ? "Deleting..." : "Delete Review"}
               </button>
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 };
