@@ -76,3 +76,35 @@ export const rejectCancellation = async (id, reason) => {
   const response = await api.patch(`/orders/admin/cancellation-requests/${id}/reject`, { reason });
   return response.data;
 };
+
+/**
+ * Admin: Create shipment / generate Delhivery AWB
+ */
+export const createShipmentAdmin = async (orderId, payload) => {
+  const response = await api.post(`/orders/admin/${orderId}/create-shipment`, payload);
+  return response.data;
+};
+
+/**
+ * Admin: Get shipping label & packing details
+ */
+export const getShippingLabelAdmin = async (orderId) => {
+  const response = await api.get(`/orders/admin/${orderId}/shipping-label`);
+  return response.data;
+};
+
+/**
+ * Admin: Track live shipment status from Delhivery
+ */
+export const trackShipmentAdmin = async (orderId) => {
+  const response = await api.get(`/orders/admin/${orderId}/track-shipment`);
+  return response.data;
+};
+
+/**
+ * Admin: Cancel shipment with courier
+ */
+export const cancelShipmentAdmin = async (orderId, reason) => {
+  const response = await api.post(`/orders/admin/${orderId}/cancel-shipment`, { reason });
+  return response.data;
+};

@@ -445,6 +445,11 @@ const Orders = () => {
                   <td className="px-6 py-4">
                     <p className="font-bold text-emerald-600">{order.orderNumber}</p>
                     <p className="text-[10px] text-slate-400 font-bold uppercase">{new Date(order.createdAt).toLocaleDateString()}</p>
+                    {order.trackingDetails?.trackingNumber && (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100 mt-1">
+                        <Truck size={9} /> {order.trackingDetails.courierName || 'Delhivery'}: {order.trackingDetails.trackingNumber}
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-sm font-bold text-slate-800">{order.userId?.name || order.shippingAddress?.fullName || "Guest"}</p>
