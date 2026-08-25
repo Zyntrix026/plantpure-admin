@@ -3,6 +3,11 @@ import { api } from "./api.js";
 /**
  * Admin: Get all orders with pagination
  */
+export const createManualOrder = async (payload) => {
+  const response = await api.post("/orders/admin/manual", payload);
+  return response.data;
+};
+
 export const getAllOrdersAdmin = async (params) => {
   // params example: { page, limit, search, orderStatus, shippingMethod }
   const response = await api.get("/orders/admin/all", { params });

@@ -16,7 +16,8 @@ import {
   Instagram,
   ChevronDown,
   Inbox,
-  Sparkles
+  Sparkles,
+  ShoppingBag
 } from "lucide-react";
 
 const menuGroups = [
@@ -61,6 +62,7 @@ const menuGroups = [
         ],
       },
       { name: "Orders", path: "/admin/orders", icon: <ShoppingCart size={20} /> },
+      { name: "Manual Order", path: "/admin/manual-order", icon: <ShoppingBag size={20} /> },
       { name: "Customers", path: "/admin/customer", icon: <Users size={20} /> },
       { name: "Reviews", path: "/admin/review", icon: <MessageSquare size={20} /> },
     

@@ -38,6 +38,7 @@ import EditBlogs from "./pages/EditBlogs";
 import WebsiteLeads from "./pages/WebsiteLeads";
 import FacebookLeads from "./pages/FacebookLeads";
 import GoogleReview from "./pages/GoogleReview";
+import ManualOrder from "./pages/ManualOrder";
 
 // Helper component to prevent logged-in users from seeing login page
 const PublicRoute = ({ children }) => {
@@ -86,6 +87,7 @@ function App() {
               <Route path="blogs/view/:id" element={<ViewBlogs />} />
               <Route path="blogs/edit/:id" element={<EditBlogs />} />
               <Route path="google-reviews" element={<GoogleReview />} />
+              <Route path="manual-order" element={<ManualOrder />} />
               {/* <Route path="settings" element={<Settings />} /> */}
               {/* <Route path="contactmessages" element={<ContactMessages />} /> */}
               {/* <Route path="staticpage" element={<StaticPages />} /> */}
